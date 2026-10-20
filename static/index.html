@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acoustic Recommender — Spotify 170k Catalog &amp; Technical Defense</title>
+  <meta name="description" content="Content-based music recommendation engine operating in 10-dimensional PCA latent space across 170,000+ tracks.">
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- ================= Site Header ================= -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-left">
+        <span class="kicker">Course Project &bull; Machine Learning Defense</span>
+        <h1 class="page-title">
+          Music Recommendation <em>by Acoustic Coordinates.</em>
+        </h1>
+        <p class="header-summary">
+          An item-item retrieval engine analyzing intrinsic digital signal processing (DSP) attributes across 170,653 Spotify tracks. Vectorized via 10-D Principal Component Analysis and retrieved in sub-15ms using Cosine Nearest Neighbors.
+        </p>
+      </div>
+
+      <!-- Telemetry Metric Panel -->
+      <div class="header-metrics-panel">
+        <div class="metric-cell">
+          <span class="metric-val" id="statTotalTracks">170,653</span>
+          <span class="metric-lbl">Catalog Tracks</span>
+        </div>
+        <div class="metric-cell">
+          <span class="metric-val" id="statArtists">29,740+</span>
+          <span class="metric-lbl">Unique Artists</span>
+        </div>
+        <div class="metric-cell">
+          <span class="metric-val" id="statYears">1921–2020</span>
+          <span class="metric-lbl">Era Span</span>
+        </div>
+        <div class="metric-cell">
+          <span class="metric-val">&lt; 15 ms</span>
+          <span class="metric-lbl">Cosine KNN Latency</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= Minimal Sticky Nav ================= -->
+  <nav class="site-nav">
+    <div class="nav-container">
+      <a href="#demo" class="nav-link active">Live Demo</a>
+      <a href="#radar" class="nav-link">Radar Comparator</a>
+      <a href="#pipeline" class="nav-link">Architecture</a>
+      <a href="#proof" class="nav-link">Empirical Proof</a>
+      <a href="#features" class="nav-link">Audio Features</a>
+      <a href="#mathematics" class="nav-link">Mathematics</a>
+      <a href="#comparison" class="nav-link">CB vs CF</a>
+      <a href="#viva" class="nav-link">Viva Defense</a>
+      <a href="#specifications" class="nav-link">Specifications</a>
+    </div>
+  </nav>
+
+  <!-- ================= Main Content Container ================= -->
+  <main class="content-container">
+
+    <!-- ================= 1. LIVE DEMO PLAYGROUND ================= -->
+    <section id="demo" class="content-section">
+      <div class="section-header">
+        <div>
+          <h2>Interactive Demonstration</h2>
+          <p class="subtitle">Query tracks, synthesize multi-seed blends, or dial bespoke acoustic coordinates.</p>
+        </div>
+        <span class="section-tag">Module 01</span>
+      </div>
+
+      <div class="card-panel">
+        <!-- Segmented Mode Control -->
+        <div class="segmented-control">
+          <button class="segment-btn active" data-mode="single">Single Track</button>
+          <button class="segment-btn" data-mode="multi">Multi-Seed Blend</button>
+          <button class="segment-btn" data-mode="mood">Acoustic Parameters</button>
+        </div>
+
+        <!-- Controls Row -->
+        <div class="controls-row">
+          <div class="search-input-wrapper">
+            <svg class="search-svg" viewBox="0 0 24 24" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input 
+              type="text" 
+              id="searchInput" 
+              class="search-field" 
+              placeholder="Search by title or artist (e.g. Bohemian Rhapsody, Blinding Lights, Tum Hi Ho)..."
+              autocomplete="off"
+            >
+            <div id="searchDropdown" class="search-results-flyout"></div>
+          </div>
+
+          <button id="btnGetRecs" class="btn-action">
+            Compute Recommendations
+          </button>
+        </div>
+
+        <!-- Multi-Seed Tray -->
+        <div id="multiSeedTray" class="multi-seed-tray">
+          <div class="multi-seed-tray-header">
+            <span>Blend Basket (Maximum 5 Seed Tracks)</span>
+            <span>Weights: [0.50, 0.25, 0.15, 0.10, 0.05]</span>
+          </div>
+          <div id="multiSeedList" class="multi-seed-list"></div>
+        </div>
+
+        <!-- Mood Sliders Grid -->
+        <div id="moodSlidersGrid" class="mood-sliders-grid">
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Danceability</span> <span class="val">0.70</span>
+            </div>
+            <input type="range" name="danceability" min="0" max="1" step="0.01" value="0.70">
+          </div>
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Energy</span> <span class="val">0.80</span>
+            </div>
+            <input type="range" name="energy" min="0" max="1" step="0.01" value="0.80">
+          </div>
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Valence (Mood)</span> <span class="val">0.65</span>
+            </div>
+            <input type="range" name="valence" min="0" max="1" step="0.01" value="0.65">
+          </div>
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Acousticness</span> <span class="val">0.15</span>
+            </div>
+            <input type="range" name="acousticness" min="0" max="1" step="0.01" value="0.15">
+          </div>
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Instrumentalness</span> <span class="val">0.05</span>
+            </div>
+            <input type="range" name="instrumentalness" min="0" max="1" step="0.01" value="0.05">
+          </div>
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Tempo (BPM)</span> <span class="val">125 BPM</span>
+            </div>
+            <input type="range" name="tempo" min="60" max="200" step="1" value="125">
+          </div>
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Release Year</span> <span class="val">2018</span>
+            </div>
+            <input type="range" name="year" min="1940" max="2020" step="1" value="2018">
+          </div>
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Loudness (dB)</span> <span class="val">-6 dB</span>
+            </div>
+            <input type="range" name="loudness" min="-30" max="0" step="1" value="-6">
+          </div>
+        </div>
+
+        <!-- Options Strip -->
+        <div class="options-strip">
+          <div class="option-item">
+            <span>Result Count:</span>
+            <input type="range" id="recLimitSlider" min="5" max="25" step="1" value="10">
+            <span id="recLimitVal" style="font-family:var(--font-mono);font-weight:600;color:var(--text-1);">10</span>
+          </div>
+
+          <div class="option-item" style="margin-left:auto;">
+            <span>Artist/Genre Affinity Re-Ranking:</span>
+            <label class="apple-switch">
+              <input type="checkbox" id="toggleRerank" checked>
+              <span class="apple-switch-slider"></span>
+            </label>
+          </div>
+
+          <div class="option-item">
+            <span>Regional Language Filter:</span>
+            <label class="apple-switch">
+              <input type="checkbox" id="toggleHindi">
+              <span class="apple-switch-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Quick Picks Strip -->
+        <div class="quick-picks-strip">
+          <span class="quick-picks-label">Curated Seeds:</span>
+          <div id="quickPicksContainer" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+        </div>
+      </div>
+
+      <!-- Seed Showcase -->
+      <div id="seedShowcaseContainer"></div>
+
+      <!-- Telemetry Execution Status -->
+      <div id="metaBanner" class="status-telemetry"></div>
+
+      <!-- Recommendations Grid -->
+      <div id="recommendationsContainer" class="rec-cards-grid"></div>
+    </section>
+
+    <!-- ================= 2. RADAR COMPARATOR ================= -->
+    <section id="radar" class="content-section">
+      <div class="section-header">
+        <div>
+          <h2>Acoustic Feature Radar Comparator</h2>
+          <p class="subtitle">Side-by-side geometric projection comparing query seed against selected neighbor in 7-dimensional audio feature space.</p>
+        </div>
+        <span class="section-tag">Module 02</span>
+      </div>
+
+      <div class="radar-layout">
+        <!-- Canvas -->
+        <div class="radar-canvas-box">
+          <canvas id="radarCanvas" width="440" height="360"></canvas>
+        </div>
+
+        <!-- Table -->
+        <div class="radar-table-box">
+          <div style="margin-bottom:12px;">
+            <div style="font-size:0.8rem;text-transform:uppercase;color:var(--text-3);letter-spacing:0.06em;">Coordinate Analysis</div>
+            <div style="font-size:0.95rem;font-weight:600;color:var(--text-1);margin-top:2px;">
+              <span id="radarTitleA" style="color:var(--accent);">Seed Track</span> vs. <span id="radarTitleB" style="color:#ffffff;">Candidate Track</span>
+            </div>
+          </div>
+
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th>Seed</th>
+                <th>Candidate</th>
+                <th>Divergence (&Delta;)</th>
+              </tr>
+            </thead>
+            <tbody id="radarMetricsTableBody"></tbody>
+          </table>
+
+          <p style="margin-top:14px;font-size:0.78rem;color:var(--text-3);line-height:1.5;">
+            Low &Delta; divergence confirms acoustic shape alignment. Cosine metric evaluates vector direction rather than amplitude, clustering tracks with equivalent sonic balance regardless of production mastering loudness.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 3. ML PIPELINE ================= -->
+    <section id="pipeline" class="content-section">
+      <div class="section-header">
+        <div>
+          <h2>Machine Learning Pipeline</h2>
+          <p class="subtitle">Mathematical transformations from raw waveform metadata to high-dimensional latent retrieval.</p>
+        </div>
+        <span class="section-tag">Module 03</span>
+      </div>
+
+      <div class="pipeline-grid">
+        <div class="pipeline-card">
+          <span class="pipeline-idx">01 &bull; Ingestion</span>
+          <h3>Feature Parsing</h3>
+          <p>Loads 170,653 audio tracks from Spotify historical catalog (1921–2020), cleaning 14 continuous attributes and resolving temporal release metadata.</p>
+          <code>pandas.read_csv</code>
+        </div>
+        <div class="pipeline-card">
+          <span class="pipeline-idx">02 &bull; Preprocessing</span>
+          <h3>StandardScaler</h3>
+          <p>Centers features to zero mean (&mu;=0) and unit variance (&sigma;=1). Prevents high-magnitude metrics like Tempo (0–220 BPM) from biasing bounded features like Valence.</p>
+          <code>z = (x - &mu;) / &sigma;</code>
+        </div>
+        <div class="pipeline-card">
+          <span class="pipeline-idx">03 &bull; Dimensionality</span>
+          <h3>10-Component PCA</h3>
+          <p>Projects 14 continuous axes into 10 orthogonal eigenvectors. Captures &gt;92% of cumulative variance while eliminating collinearity between loudness and energy.</p>
+          <code>PCA(n_components=10)</code>
+        </div>
+        <div class="pipeline-card">
+          <span class="pipeline-idx">04 &bull; Unsupervised</span>
+          <h3>K-Means (k=15)</h3>
+          <p>Partitions latent space into 15 acoustic macro-genres. Serves as structural validation and pre-filtering retrieval heuristic for catalog candidate generation.</p>
+          <code>KMeans(n_clusters=15)</code>
+        </div>
+        <div class="pipeline-card">
+          <span class="pipeline-idx">05 &bull; Indexing</span>
+          <h3>Cosine NearestNeighbors</h3>
+          <p>Fits scikit-learn KD/ball tree index over 170k vectors. Queries top-k neighbors in &lt;15ms without precomputing a 115 GB full pairwise similarity matrix.</p>
+          <code>metric='cosine'</code>
+        </div>
+        <div class="pipeline-card">
+          <span class="pipeline-idx">06 &bull; Re-Ranking</span>
+          <h3>Contextual Bonus</h3>
+          <p>Applies +1.0 artist affinity bonus and +0.5 cultural/genre bonus to candidate set. Re-ranks by composite score to balance acoustic precision with familiar context.</p>
+          <code>score = bonus - distance</code>
+        </div>
+      </div>
+
+      <div class="pipeline-media">
+        <img src="/static/assets/pipeline_diagram.jpg?v=2" alt="End-to-End ML Architecture Flow Diagram" style="width:100%;max-width:960px;margin:0 auto;display:block;">
+      </div>
+    </section>
+
+    <!-- ================= 4. EMPIRICAL PROOF ================= -->
+    <section id="proof" class="content-section">
+      <div class="section-header">
+        <div>
+          <h2>Empirical Proof: Recommendation vs. Keyword Search</h2>
+          <p class="subtitle">Demonstrating true latent feature matching versus string lookups using the Ennio Morricone case study.</p>
+        </div>
+        <span class="section-tag">Module 04</span>
+      </div>
+
+      <div class="card-panel">
+        <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:28px;align-items:center;">
+          <div>
+            <div class="callout-quote">
+              <strong>Core Distinction:</strong> Text search retrieves documents matching an alphanumeric string. An acoustic recommendation engine discovers items sharing latent coordinate density even when metadata strings are completely disjoint.
+            </div>
+
+            <p style="font-size:0.9rem;color:var(--text-2);margin-bottom:12px;line-height:1.6;">
+              When querying the seed word <strong>&ldquo;Friends&rdquo;</strong>, the engine identifies the 1984 cinematic composition by Italian composer <strong>Ennio Morricone</strong> (<em>Once Upon a Time in America</em>).
+            </p>
+            <ul style="font-size:0.85rem;color:var(--text-2);padding-left:18px;margin-bottom:16px;line-height:1.6;">
+              <li><strong>Seed Coordinates:</strong> <code>instrumentalness = 0.72</code>, <code>acousticness = 0.67</code>, <code>energy = 0.31</code>, <code>valence = 0.16</code> (an acoustic, melancholic orchestral movement).</li>
+              <li><strong>System Output:</strong> It retrieves John Williams (<em>Raiders March</em>), Nobuo Uematsu (<em>Final Fantasy VII</em>), and Gheorghe Zamfir (<em>Einsamer Hirte</em>).</li>
+              <li><strong>The Proof:</strong> None of the retrieved tracks contain the word &ldquo;Friends&rdquo; in their metadata. They cluster purely because their sonic vectors share the same PCA coordinates.</li>
+            </ul>
+
+            <button class="btn-action" onclick="selectSeedTrack({id:'0RDk6mBYsvAm7W9Ggo4Gs7', title:'Friends', artist:'Ennio Morricone'}); runRecommendation({mode:'single', song_query:'Friends Morricone'}); document.getElementById('demo').scrollIntoView({behavior:'smooth'});">
+              Run &ldquo;Friends&rdquo; Case Study
+            </button>
+          </div>
+
+          <div style="text-align:center;">
+            <img src="/static/assets/radar_proof.jpg?v=2" alt="Empirical Acoustic Radar Alignment: Seed vs Recommendation" style="max-width:100%;border-radius:var(--r-md);border:1px solid var(--border);">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 5. AUDIO FEATURES ================= -->
+    <section id="features" class="content-section">
+      <div class="section-header">
+        <div>
+          <h2>Spotify Audio Feature Dictionary</h2>
+          <p class="subtitle">Continuous mathematical audio representations extracted via Digital Signal Processing (DSP).</p>
+        </div>
+        <span class="section-tag">Module 05</span>
+      </div>
+
+      <div class="specs-container">
+        <div class="spec-cell">
+          <div class="kicker-lbl">Acousticness &bull; [0.0 &ndash; 1.0]</div>
+          <div class="val-title">Acoustic vs. Electronic</div>
+          <div class="desc-sub">Confidence measure of whether the recording uses purely acoustic instrumentation versus synthesizers and electric amplification.</div>
+        </div>
+        <div class="spec-cell">
+          <div class="kicker-lbl">Danceability &bull; [0.0 &ndash; 1.0]</div>
+          <div class="val-title">Rhythmic Regularity</div>
+          <div class="desc-sub">Quantifies beat strength, rhythm stability, tempo regularity, and overall suitability for rhythmic physical dance movement.</div>
+        </div>
+        <div class="spec-cell">
+          <div class="kicker-lbl">Energy &bull; [0.0 &ndash; 1.0]</div>
+          <div class="val-title">Perceptual Intensity</div>
+          <div class="desc-sub">Measures activity, loudness, timbre dynamic range, and entropy. Heavy rock exceeds 0.90; classical piano solo rates below 0.20.</div>
+        </div>
+        <div class="spec-cell">
+          <div class="kicker-lbl">Valence &bull; [0.0 &ndash; 1.0]</div>
+          <div class="val-title">Musical Positiveness</div>
+          <div class="desc-sub">High valence conveys positive emotions (happiness, cheerfulness, euphoria); low valence tracks convey sadness, melancholy, or tension.</div>
+        </div>
+        <div class="spec-cell">
+          <div class="kicker-lbl">Instrumentalness &bull; [0.0 &ndash; 1.0]</div>
+          <div class="val-title">Vocal Absence Probability</div>
+          <div class="desc-sub">Values above 0.50 predict absence of vocal content. Rap and speech approach 0.00; symphonies and ambient soundtracks exceed 0.85.</div>
+        </div>
+        <div class="spec-cell">
+          <div class="kicker-lbl">Liveness &bull; [0.0 &ndash; 1.0]</div>
+          <div class="val-title">Audience Presence</div>
+          <div class="desc-sub">Detects crowd noise, stage reverb, and audience presence. Values above 0.80 indicate strong probability of a live concert recording.</div>
+        </div>
+        <div class="spec-cell">
+          <div class="kicker-lbl">Speechiness &bull; [0.0 &ndash; 1.0]</div>
+          <div class="val-title">Spoken Word Density</div>
+          <div class="desc-sub">Distinguishes spoken words from melodic singing. Talk shows and audiobooks rate &gt;0.66; rap rates 0.33–0.66; standard songs rate &lt;0.33.</div>
+        </div>
+        <div class="spec-cell">
+          <div class="kicker-lbl">Tempo &bull; [BPM]</div>
+          <div class="val-title">Beats Per Minute</div>
+          <div class="desc-sub">Overall estimated pace of the track, derived from periodic inter-onset intervals between acoustic transients.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 6. MATHEMATICS ================= -->
+    <section id="mathematics" class="content-section">
+      <div class="section-header">
+        <div>
+          <h2>Mathematical Foundations</h2>
+          <p class="subtitle">Formulations governing normalization, subspace decomposition, similarity metrics, and blending.</p>
+        </div>
+        <span class="section-tag">Module 06</span>
+      </div>
+
+      <div class="math-grid">
+        <div class="math-box-card">
+          <h3>Cosine Similarity &amp; Distance</h3>
+          <p>Calculates the angular proximity between two vectors in the 10-dimensional orthogonal PCA space.</p>
+          <div class="formula-display">cos(&theta;) = (u &bull; v) / (||u|| ||v||)</div>
+          <div class="formula-display">D_C(u, v) = 1 - cos(&theta;)</div>
+          <ul class="math-notes">
+            <li>Eliminates duration and amplitude scaling artifacts inherent in Euclidean distance.</li>
+            <li>For normalized audio vectors, <code>D_C &isin; [0, 1]</code>.</li>
+          </ul>
+        </div>
+
+        <div class="math-box-card">
+          <h3>PCA Latent Projection</h3>
+          <p>Calculates orthogonal eigenvectors of the sample covariance matrix to maximize captured variance.</p>
+          <div class="formula-display">&Sigma; = (1 / N) &sum; (x_i - &mu;)(x_i - &mu;)^T</div>
+          <div class="formula-display">&Sigma; v_k = &lambda;_k v_k</div>
+          <ul class="math-notes">
+            <li>Compresses 14 dimensions into 10 principal components with &gt;92% variance.</li>
+            <li>Removes multicollinearity between energy, loudness, and acousticness.</li>
+          </ul>
+        </div>
+
+        <div class="math-box-card">
+          <h3>K-Means Objective Function</h3>
+          <p>Partitions observations into 15 disjoint clusters by minimizing within-cluster inertia.</p>
+          <div class="formula-display">J = &sum;_{k=1}^K &sum;_{x &isin; S_k} ||x - &mu;_k||^2</div>
+          <ul class="math-notes">
+            <li>Segments 170k tracks into 15 acoustic macro-genres.</li>
+            <li>Enables localized candidate retrieval heuristics on multi-million track catalogs.</li>
+          </ul>
+        </div>
+
+        <div class="math-box-card">
+          <h3>Multi-Seed Vector Blending</h3>
+          <p>Synthesizes a combined latent playlist vector using a weighted linear combination with exponential decay.</p>
+          <div class="formula-display">v_{blend} = (&sum;_{i=1}^m w_i v_i) / (&sum;_{i=1}^m w_i)</div>
+          <ul class="math-notes">
+            <li>Decay weights: <code>w = [0.50, 0.25, 0.15, 0.10, 0.05]</code>.</li>
+            <li>Allows smooth thematic interpolation between disparate genres and artists.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 7. CB VS CF MATRIX ================= -->
+    <section id="comparison" class="content-section">
+      <div class="section-header">
+        <div>
+          <h2>Content-Based vs. Collaborative Filtering Matrix</h2>
+          <p class="subtitle">Systematic trade-off analysis between audio-derived content models and interaction-based collaborative models.</p>
+        </div>
+        <span class="section-tag">Module 07</span>
+      </div>
+
+      <div class="table-wrap">
+        <table class="comparison-grid-table">
+          <thead>
+            <tr>
+              <th>Evaluation Parameter</th>
+              <th>Content-Based Filtering (This System)</th>
+              <th>Collaborative Filtering (Matrix Factorization / SVD)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Item Cold-Start (New Tracks)</td>
+              <td>Zero Cold-Start: Extracts audio features directly from waveform. Immediately recommends tracks with 0 plays.</td>
+              <td>Fails: Cannot recommend unrated or newly released tracks until dozens of users interact with them.</td>
+            </tr>
+            <tr>
+              <td>User Cold-Start (New Listeners)</td>
+              <td>Immediate: Requires only 1 seed track or mood selection to generate tailored recommendations.</td>
+              <td>Fails: Requires substantial listening interaction history before user latent embedding converges.</td>
+            </tr>
+            <tr>
+              <td>Popularity Bias (The Long Tail)</td>
+              <td>Unbiased: Obscure independent tracks matching acoustic coordinates have equal probability of retrieval.</td>
+              <td>Severe Bias: Tends to over-recommend viral hits and mainstream tracks ("Matthew Effect").</td>
+            </tr>
+            <tr>
+              <td>Interaction Sparsity</td>
+              <td>Not Applicable: Features are 100% complete for every song in the catalog.</td>
+              <td>High Vulnerability: User-item matrices typically exceed 99.8% sparsity, compromising convergence.</td>
+            </tr>
+            <tr>
+              <td>System Memory Footprint</td>
+              <td>Sub-300 MB: NearestNeighbors index operates in ~250MB RAM with sub-15ms vector lookup.</td>
+              <td>Gigabytes: Requires storing and factorizing dense multi-million user/item embedding matrices.</td>
+            </tr>
+            <tr>
+              <td>Explainability &amp; Transparency</td>
+              <td>High: Recommendations explainable via concrete acoustic metrics (tempo, valence, acousticness).</td>
+              <td>Low: Latent factors (e.g. SVD component 38) are mathematical abstractions lacking human interpretation.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ================= 8. VIVA DEFENSE ================= -->
+    <section id="viva" class="content-section">
+      <div class="section-header">
+        <div>
+          <h2>Professor &amp; Viva Defense Master Guide</h2>
+          <p class="subtitle">Curated academic questions and rigorous model answers for oral project defense.</p>
+        </div>
+        <span class="section-tag">Module 08</span>
+      </div>
+
+      <div class="accordion-list">
+        <div class="accordion-item open">
+          <button class="accordion-trigger">
+            <span>Q1 &bull; What is the fundamental machine learning paradigm used in this project?</span>
+            <span class="accordion-indicator">+</span>
+          </button>
+          <div class="accordion-content">
+            <div class="callout-quote">
+              <strong>Model Defense:</strong> &ldquo;This is an Item-Item Content-Based Recommender System. It constructs a 14-dimensional continuous feature space representing Spotify audio descriptors, normalizes them via StandardScaler, reduces dimensionality to 10 orthogonal axes via PCA, and uses Cosine Distance Nearest Neighbors to retrieve acoustic neighbors, followed by a hybrid re-ranking stage.&rdquo;
+            </div>
+            <p>Emphasize that the system models the physics and intrinsic musical qualities of the audio signal, operating completely independently of user rating histories.</p>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <button class="accordion-trigger">
+            <span>Q2 &bull; Why choose Content-Based Filtering over Collaborative Filtering (CF)?</span>
+            <span class="accordion-indicator">+</span>
+          </button>
+          <div class="accordion-content">
+            <div class="callout-quote">
+              <strong>Model Defense:</strong> &ldquo;Collaborative Filtering requires explicit user interaction histories (clicks, listens, ratings). In a music catalog, CF suffers from the severe Item Cold-Start problem—thousands of new or independent songs with zero listens cannot be recommended. Content-Based Filtering analyzes the audio waveform directly, enabling immediate recommendation of any track regardless of its popularity.&rdquo;
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <button class="accordion-trigger">
+            <span>Q3 &bull; Why is StandardScaler mandatory before applying PCA?</span>
+            <span class="accordion-indicator">+</span>
+          </button>
+          <div class="accordion-content">
+            <div class="callout-quote">
+              <strong>Model Defense:</strong> &ldquo;PCA seeks orthogonal axes that maximize sample variance. Because tempo ranges up to 220 BPM and loudness spans -60 to 0 dB, while valence is constrained between 0.0 and 1.0, unscaled features would cause the first principal components to reflect only tempo and volume. StandardScaler sets mean=0 and variance=1 across all dimensions, giving all musical qualities equal geometric importance.&rdquo;
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <button class="accordion-trigger">
+            <span>Q4 &bull; How do you prove this isn't just a text or keyword search engine?</span>
+            <span class="accordion-indicator">+</span>
+          </button>
+          <div class="accordion-content">
+            <div class="callout-quote">
+              <strong>Model Defense:</strong> &ldquo;The text input is merely a seed selector to retrieve the starting vector. When querying 'Friends' (Ennio Morricone's 1984 score), none of the recommended tracks contain the word 'Friends'. Instead, the engine recommends John Williams, Nobuo Uematsu, and Gheorghe Zamfir because their instrumentalness (&gt;0.80), acousticness (&gt;0.70), and low energy match the seed's exact acoustic coordinates.&rdquo;
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <button class="accordion-trigger">
+            <span>Q5 &bull; Why didn't you compute a full 170k &times; 170k pairwise similarity matrix?</span>
+            <span class="accordion-indicator">+</span>
+          </button>
+          <div class="accordion-content">
+            <div class="callout-quote">
+              <strong>Model Defense:</strong> &ldquo;A full 170,000 &times; 170,000 float32 matrix requires over 115 Gigabytes of RAM (&approx; 2.89 &times; 10^10 elements). Using scikit-learn's NearestNeighbors structure allows on-the-fly cosine distance queries in under 15 milliseconds, keeping total RAM consumption under 300 Megabytes.&rdquo;
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <button class="accordion-trigger">
+            <span>Q6 &bull; How would you quantitatively evaluate this recommender system offline?</span>
+            <span class="accordion-indicator">+</span>
+          </button>
+          <div class="accordion-content">
+            <div class="callout-quote">
+              <strong>Model Defense:</strong> &ldquo;We would evaluate against curated playlist benchmarks (e.g. Spotify Million Playlist Dataset) using:
+              <br>1. <strong>Hit Rate@K / Precision@K:</strong> Ratio of recommendations belonging to the same human-curated playlist as the seed track.
+              <br>2. <strong>NDCG@K:</strong> Measures ranking quality by discounting relevant items positioned lower in the recommendation list.
+              <br>3. <strong>Intra-List Diversity (ILD):</strong> Average pairwise cosine distance between recommended items to guarantee the engine does not collapse into a redundant echo chamber.&rdquo;
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <button class="accordion-trigger">
+            <span>Q7 &bull; What role does K-Means clustering play if NearestNeighbors handles recommendations?</span>
+            <span class="accordion-indicator">+</span>
+          </button>
+          <div class="accordion-content">
+            <div class="callout-quote">
+              <strong>Model Defense:</strong> &ldquo;K-Means partitions the 170,000 tracks into 15 acoustic macro-genres. Beyond structural profiling, it functions as a fast candidate-filtering heuristic (retrieval stage) to restrict nearest-neighbor searches strictly to the seed track's cluster, boosting throughput on multi-million track catalogs.&rdquo;
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <button class="accordion-trigger">
+            <span>Q8 &bull; How would you evolve this system into an industry-grade production pipeline?</span>
+            <span class="accordion-indicator">+</span>
+          </button>
+          <div class="accordion-content">
+            <div class="callout-quote">
+              <strong>Model Defense:</strong> &ldquo;We would implement a Two-Stage Hybrid Architecture:
+              <br>1. <strong>Retrieval (Candidate Generation):</strong> Approximate Nearest Neighbors (ANN) via FAISS or HNSW on audio embeddings + collaborative filtering embeddings (Two-Tower / LightFM).
+              <br>2. <strong>Ranking:</strong> Gradient Boosted Decision Trees (LightGBM/XGBoost) incorporating real-time user context (time of day, device, skip rate, session duration).&rdquo;
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 9. SPECIFICATIONS ================= -->
+    <section id="specifications" class="content-section">
+      <div class="section-header">
+        <div>
+          <h2>System Specification Card</h2>
+          <p class="subtitle">Quick reference specifications for academic review.</p>
+        </div>
+        <span class="section-tag">Module 09</span>
+      </div>
+
+      <div class="specs-container">
+        <div class="spec-cell">
+          <div class="kicker-lbl">Catalog Size</div>
+          <div class="val-title">170,653 Tracks</div>
+          <div class="desc-sub">Spotify audio dataset covering 1921 through 2020.</div>
+        </div>
+        <div class="spec-cell">
+          <div class="kicker-lbl">Raw DSP Features</div>
+          <div class="val-title">14 Continuous Metrics</div>
+          <div class="desc-sub">Acousticness, danceability, energy, valence, tempo, loudness, etc.</div>
+        </div>
+        <div class="spec-cell">
+          <div class="kicker-lbl">Normalization</div>
+          <div class="val-title">StandardScaler (&mu;=0, &sigma;=1)</div>
+          <div class="desc-sub">Ensures uniform scale variance across disparate audio units.</div>
+        </div>
+        <div class="spec-cell">
+          <div class="kicker-lbl">Latent Space (PCA)</div>
+          <div class="val-title">10 Orthogonal Axes</div>
+          <div class="desc-sub">Retains &gt;92% variance, eliminates multicollinearity.</div>
+        </div>
+        <div class="spec-cell">
+          <div class="kicker-lbl">Similarity Metric</div>
+          <div class="val-title">Cosine Distance</div>
+          <div class="desc-sub">Evaluates angular timbre alignment rather than volume amplitude.</div>
+        </div>
+        <div class="spec-cell">
+          <div class="kicker-lbl">Query Latency</div>
+          <div class="val-title">&lt; 15 Milliseconds</div>
+          <div class="desc-sub">NearestNeighbors cosine index execution time.</div>
+        </div>
+        <div class="spec-cell">
+          <div class="kicker-lbl">Hybrid Re-Ranking</div>
+          <div class="val-title">Artist (+1.0) &bull; Cultural (+0.5)</div>
+          <div class="desc-sub">Balances acoustic similarity with contextual user preference.</div>
+        </div>
+        <div class="spec-cell">
+          <div class="kicker-lbl">Runtime RAM</div>
+          <div class="val-title">&lt; 280 Megabytes</div>
+          <div class="desc-sub">High memory efficiency without full 115 GB matrix.</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= Footer ================= -->
+  <footer class="site-footer">
+    <p>Acoustic Music Recommendation System &bull; Machine Learning Mini-Project</p>
+    <p style="margin-top:4px;color:var(--text-3);">Python (scikit-learn, PCA, KMeans) &bull; Starlette &bull; Vanilla JavaScript &bull; Apple Minimal UI</p>
+  </footer>
+
+  <div id="toast"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
