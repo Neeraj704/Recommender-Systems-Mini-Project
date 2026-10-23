@@ -1,5 +1,8 @@
 # Spotify Music Recommendation System
 
+> 🌐 **Live Website:** [https://recommender-mini-proj.vercel.app](https://recommender-mini-proj.vercel.app)  
+> *(Fully hosted & deployed on Vercel with zero local setup needed)*
+
 An end-to-end Content-Based Music Recommendation Engine operating on a comprehensive Spotify dataset of **170,653 tracks** (1921–2020). Built with **StandardScaler Normalization**, **10-Component PCA Latent Space**, **K-Means Clustering (k=15)**, and **Cosine Nearest Neighbors**, served through an Apple-inspired minimalist web application.
 
 ---
