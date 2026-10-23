@@ -178,7 +178,7 @@
     <h1>Music Recommendation System</h1>
     <div class="subtitle">Latent Acoustic Vector Modeling, Cosine Distance Indexing, and Hybrid Re-Ranking</div>
     <div style="font-size: 9.5pt; color: #475569;">
-      Comprehensive Project Report, Theoretical Architecture, Mathematical Foundations, and Viva Defense Documentation
+      Comprehensive Project Report, Theoretical Architecture, Mathematical Foundations, and Documentation
     </div>
   </div>
 
@@ -460,70 +460,6 @@ ranked_songs = candidates.sort_values(by=['bonus', 'distance'], ascending=[False
   </table>
 
   <div class="page-break"></div>
-
-  <!-- SECTION 8 -->
-  <h2>8. Professor &amp; Viva Defense Master Guide</h2>
-
-  <div class="avoid-break">
-    <h3>Q1: &ldquo;What is the fundamental machine learning paradigm used in this project?&rdquo;</h3>
-    <div class="callout">
-      <strong>Model Answer:</strong> &ldquo;This is an Item-Item Content-Based Recommender System. It constructs a 14-dimensional continuous feature space representing Spotify audio descriptors, reduces dimensionality via PCA to 10 orthogonal axes, and uses Cosine Distance Nearest Neighbors to retrieve acoustic neighbors, followed by a hybrid re-ranking stage.&rdquo;
-    </div>
-  </div>
-
-  <div class="avoid-break">
-    <h3>Q2: &ldquo;Why did you choose Content-Based Filtering over Collaborative Filtering (CF)?&rdquo;</h3>
-    <div class="callout">
-      <strong>Model Answer:</strong> &ldquo;Collaborative Filtering requires explicit user-item interaction histories (clicks, listens, ratings). In a music domain, CF suffers from the severe Item Cold-Start problem—thousands of new or independent songs with zero listens cannot be recommended. Content-Based Filtering analyzes the audio waveform directly, enabling immediate recommendation of any track regardless of its popularity.&rdquo;
-    </div>
-  </div>
-
-  <div class="avoid-break">
-    <h3>Q3: &ldquo;Why is StandardScaler mandatory before applying PCA?&rdquo;</h3>
-    <div class="callout">
-      <strong>Model Answer:</strong> &ldquo;PCA seeks orthogonal axes that maximize sample variance. Because tempo ranges up to 220 BPM and loudness spans -60 to 0 dB, while valence is constrained between 0.0 and 1.0, unscaled features would cause the first principal components to reflect only tempo and volume. StandardScaler sets mean=0 and variance=1 across all dimensions, giving all musical qualities equal geometric importance.&rdquo;
-    </div>
-  </div>
-
-  <div class="avoid-break">
-    <h3>Q4: &ldquo;How do you prove this isn't just a text or keyword search engine?&rdquo;</h3>
-    <div class="callout">
-      <strong>Model Answer:</strong> &ldquo;The text input is merely a seed selector to extract the starting vector. When querying 'Friends' (Ennio Morricone's 1984 score), none of the recommended tracks contain the word 'Friends'. Instead, the engine recommends John Williams, Nobuo Uematsu, and Gheorghe Zamfir because their instrumentalness (&gt;0.80), acousticness (&gt;0.70), and low energy match the seed's exact acoustic coordinates.&rdquo;
-    </div>
-  </div>
-
-  <div class="avoid-break">
-    <h3>Q5: &ldquo;Why didn't you compute a full 170k &times; 170k pairwise similarity matrix?&rdquo;</h3>
-    <div class="callout">
-      <strong>Model Answer:</strong> &ldquo;A full 170,000 &times; 170,000 float32 matrix requires over 115 Gigabytes of RAM (&approx; 2.89 &times; 10^10 elements). Using scikit-learn's NearestNeighbors structure allows on-the-fly cosine distance queries in under 15 milliseconds, keeping total RAM consumption under 300 Megabytes.&rdquo;
-    </div>
-  </div>
-
-  <div class="avoid-break">
-    <h3>Q6: &ldquo;How would you quantitatively evaluate this recommender system offline?&rdquo;</h3>
-    <div class="callout">
-      <strong>Model Answer:</strong> &ldquo;We would evaluate against curated playlist benchmarks (e.g., Spotify Million Playlist Dataset) using:
-      <br>1. <strong>Hit Rate@K / Precision@K:</strong> Ratio of recommendations that belong to the same playlist as the seed track.
-      <br>2. <strong>NDCG@K (Normalized Discounted Cumulative Gain):</strong> Measuring ranking quality by penalizing relevant items appearing lower down.
-      <br>3. <strong>Intra-List Diversity (ILD):</strong> Average pairwise distance between recommended tracks to verify we avoid echo chambers.&rdquo;
-    </div>
-  </div>
-
-  <div class="avoid-break">
-    <h3>Q7: &ldquo;What role does K-Means clustering play if NearestNeighbors handles recommendation?&rdquo;</h3>
-    <div class="callout">
-      <strong>Model Answer:</strong> &ldquo;K-Means partitions the 170,000 tracks into 15 acoustic macro-genres. Beyond structural profiling, it functions as a fast candidate-filtering heuristic (retrieval stage) to restrict nearest-neighbor searches strictly to the seed track's cluster, boosting throughput on multi-million track catalogs.&rdquo;
-    </div>
-  </div>
-
-  <div class="avoid-break">
-    <h3>Q8: &ldquo;How would you evolve this system into an industry-grade production pipeline?&rdquo;</h3>
-    <div class="callout">
-      <strong>Model Answer:</strong> &ldquo;We would implement a Two-Stage Hybrid Architecture:
-      <br>1. <strong>Retrieval (Candidate Generation):</strong> Approximate Nearest Neighbors (ANN) via FAISS or HNSW on audio embeddings + collaborative filtering embeddings (LightFM/Two-Tower).
-      <br>2. <strong>Ranking:</strong> Gradient Boosted Decision Trees (LightGBM/XGBoost) incorporating real-time user context (time of day, device, skip rate, session duration).&rdquo;
-    </div>
-  </div>
 
   <!-- SECTION 9 -->
   <h2>9. Quick-Reference System Specification Card</h2>

@@ -55,9 +55,7 @@ If you prefer to configure the virtual environment manually:
    - 6-stage pipeline: Ingestion → StandardScaler → 10-D PCA → K-Means (15 clusters) → Cosine NearestNeighbors (sub-15ms) → Hybrid Re-ranking (+1.0 artist, +0.5 genre).
 4. **Empirical Proof Case Study**:
    - Demonstrates why querying Ennio Morricone's *"Friends"* recommends John Williams and Nobuo Uematsu instead of text matches.
-5. **Professor & Viva Defense Master Guide**:
-   - Top 8 academic questions with model answers (Cold-start, PCA variance, RAM complexity, evaluation metrics).
-6. **System Specifications Card**:
+5. **System Specifications Card**:
    - Quick reference stats for presentations and viva exams.
 
 ---
